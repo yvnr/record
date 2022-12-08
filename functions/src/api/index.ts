@@ -14,7 +14,7 @@ const apiRoute = Router();
 app.use((req, res, next) => {
   console.log('url', req.originalUrl);
   console.log('method', req.method);
-  next();
+  return next();
 });
 
 console.info('here');

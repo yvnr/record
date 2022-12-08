@@ -14,4 +14,5 @@ type ExperiencePayload = {
   role: string;
   location: string;
   summary: string;
+  status: string;
 };

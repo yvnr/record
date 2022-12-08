@@ -7,6 +7,7 @@ type Experience = {
   summary: string;
   univId: string;
   uid: string;
+  status: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };

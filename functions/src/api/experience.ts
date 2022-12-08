@@ -42,22 +42,9 @@ async function getExperienceById(req: Request, res: Response) {
   }
 
   const expData = docSnap.data() as Experience;
-  const respData = Object.assign({}, {id: docSnap.id}, expData);
+  const {createdAt, updatedAt} = expData;
+  const respData = Object.assign({}, {id: docSnap.id}, expData, {createdAt: createdAt.toDate(), updatedAt: updatedAt.toDate()});
   return res.send(respData);
-  // const { uid, univId } = expData;
-  // const userSnap = await firestore().collection("user").doc(uid).get();
-  // const universitySnap = await firestore().collection("universities").doc(univId).get();
-
-  // if (!userSnap.exists || !universitySnap.exists) {
-  //   return res.status(400).send({
-  //     code: "invalid-request",
-  //     message: "No such university or user found",
-  //   });
-  // }
-
-  // const userData = userSnap.data() as User
-  // const respData = Object.assign({}, {name: userData.name})
-  // return res.send(respData);
 }
 
 async function getExperienceList(req: Request, res: Response) {
@@ -67,7 +54,9 @@ async function getExperienceList(req: Request, res: Response) {
       .where('univId', '==', univId)
       .get();
   const respData = docsSnap.docs.map((doc) => {
-    return Object.assign({}, {id: doc.id}, doc.data());
+    const expData = doc.data() as Experience;
+    const {createdAt, updatedAt} = expData;
+    return Object.assign({}, {id: doc.id}, expData, {createdAt: createdAt.toDate(), updatedAt: updatedAt.toDate()} );
   });
   return res.send(respData);
 }
@@ -144,7 +133,7 @@ async function validateExpPayload(
     });
   }
 
-  const {company, role, summary, location} = req.body;
+  const {company, role, summary, location, status} = req.body as ExperiencePayload;
 
   if (!company || company.length < 3 || company.length > 50) {
     return res.status(400).send({
@@ -160,10 +149,10 @@ async function validateExpPayload(
     });
   }
 
-  if (!summary || summary.length > 300) {
+  if (!summary || summary.length > 1000) {
     return res.status(400).send({
       code: 'invalid-request',
-      message: 'Please enter summary with max of 300 characters',
+      message: 'Please enter summary with max of 1000 characters',
     });
   }
 
@@ -173,5 +162,13 @@ async function validateExpPayload(
       message: 'Please provide location with 3-50 characters',
     });
   }
+
+  if (!status) {
+    return res.status(400).send({
+      code: 'invalid-request',
+      message: 'Please provide status',
+    });
+  }
+
   return next();
 }

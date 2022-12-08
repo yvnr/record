@@ -12,18 +12,13 @@ export default router;
 
 async function createUser(req: Request, res: Response) {
   const {email, password, univId, name} = req.body as CreateUserPayload;
+  console.info(email);
   try {
     // check whether email exists or not
-    const existingUserRecord = await auth()
-        .getUserByEmail(email)
-        .catch(() => {
-          return res.status(400).send({
-            code: 'invalid-request',
-            message: 'Please enter email in a proper format',
-          });
-        });
 
-    if (existingUserRecord) {
+    const userDoc = await firestore().collection('users').where('email', '==', email).get();
+
+    if (!userDoc.empty) {
       return res.status(400).send({
         code: 'invalid-request',
         message: 'Email is already registered',
@@ -81,7 +76,8 @@ async function createUser(req: Request, res: Response) {
       sessionToken: token,
     });
   } catch (err: any) {
-    return res.status(err.response.status).send(err.response.data);
+    console.info(err);
+    return res.status(400).send(err.message);
   }
 }
 
