@@ -1,5 +1,4 @@
 import {Request, Response, NextFunction} from 'express';
-import secrets from '../../secrets';
 import {firestore} from '../../admin';
 
 // enum representation for all the http request methods
