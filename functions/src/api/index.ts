@@ -1,5 +1,4 @@
-import * as express from 'express';
-import {Router} from 'express';
+import express, {Router} from 'express';
 import userRoute from './user';
 import experienceRoute from './experience';
 import universityRoute from './university';

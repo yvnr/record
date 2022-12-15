@@ -1,6 +1,6 @@
 import {Router, Request, Response, NextFunction} from 'express';
 import {firestore} from '../admin';
-import * as moment from 'moment-timezone';
+import moment from 'moment-timezone';
 
 const router = Router();
 
