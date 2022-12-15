@@ -1,5 +1,6 @@
 import {Request, Response, NextFunction} from 'express';
 import secrets from '../../secrets';
+import {firestore} from '../../admin';
 
 // enum representation for all the http request methods
 enum RequestMethods {
@@ -38,9 +39,13 @@ export default async function(
     });
   }
 
+  // get apiSecrets document
+  const apiSecretsDoc = await firestore().collection('secrets').doc('apiSecrets').get();
+  const secrets = apiSecretsDoc.data() as ApiSecrets;
+
   // getting the apiKey and api Secret from header and validating it
   const [apiKey, apiSecret] = authorization.split(' ');
-  if (!apiKey || !apiSecret || apiSecret != secrets['apiSecrets'][apiKey]) {
+  if (!apiKey || !apiSecret || apiSecret != secrets[apiKey]) {
     return res.status(401).send({
       code: 'unauthorized',
       message: 'You are not authorized to make this request',

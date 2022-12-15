@@ -31,3 +31,6 @@ type User = {
   email: string;
   univId: string;
 };
+
+// apiSecrets doc in secrets collection
+type ApiSecrets = Record<string, string>
