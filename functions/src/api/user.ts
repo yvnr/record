@@ -2,15 +2,27 @@ import {NextFunction} from 'connect';
 import {Router, Request, Response} from 'express';
 import {auth, firestore} from '../admin';
 
-const router = Router();
+const router = Router(); // express router
 
-router.post('/register', validateCreateUserPayload, createUser);
+// router handlers with the request path associated with corresponding request handlers
+router.post('/register', validateCreateUserPayload, registerUser);
 router.patch('/:id', validateUpdateUserPayload, updateUser);
 router.get('/:id', getUserById);
 
 export default router;
 
-async function createUser(req: Request, res: Response) {
+/**
+ * POST request handler after validating request payload in validateCreateUserPayload request handler.
+ * Checks whether email exists or not.
+ * If exists, throws an error response
+ * Else, create a user in the firebase authentication system(IDP) and user doc in the users collection
+ * And create a customToken from the firebase auth system which will be used to login on the client side.
+ * @param {Request} req - http request recieved
+ * @param {Response} res - http response used to send data to client
+ * @return {Promise<Response<{sessionToken: string} | Error>>} - returns error response if email already exists. Otherwise returns sessionToken
+ * as json object.
+ */
+async function registerUser(req: Request, res: Response) {
   const {email, password, univId, name} = req.body as CreateUserPayload;
   console.info(email);
   try {
@@ -81,10 +93,20 @@ async function createUser(req: Request, res: Response) {
   }
 }
 
+/**
+ * PATCH request handler after validating request payload in validateUpdateUserPayload request handler.
+ * If the doc does not exist and also if the doc is not created by the requested user returns error response
+ * Else, Updates user doc with the data provided in the doc and also name in the user of firebase auth system
+ * @param {Request} req - http request recieved
+ * @param {Response} res - http response used to send data to client
+ * @return {Promise<Response<200 | Error>>} - returns error response if the doc does not exist and also if the doc is not
+ * created by the requested user. Otherwise send status 200
+ */
 async function updateUser(req: Request, res: Response) {
   const {name} = req.body as CreateUserPayload;
   const uid = req.headers['uid'] as string;
 
+  // validating the user requested and user doc update id are same or not
   if (uid != req.params['id']) {
     return res.status(400).send({
       code: 'invalid-request',
@@ -104,16 +126,28 @@ async function updateUser(req: Request, res: Response) {
 
     return res.sendStatus(200);
   } catch (err: any) {
-    return res.status(err.response.status).send(err.response.data);
+    // catching the error. Since while updating the name with the firebase auth. If the name contains
+    // invalid characters. It throws an error.
+    return res.status(400).send(err.response.data);
   }
 }
 
+/**
+ * Its an express middleware function.
+ * Validates the request payload is in the expected format or not for POST Request
+ * If passes, nex
+ * @param {Request} req - http request recieved
+ * @param {Response} res - http response used to send data to client
+ * @param {NextFunction} next - used to pass the request handler to next express middleware function
+ * @return {Promise<void | Response<Error>>}  return error response if it is improper. If not, passes to next middleware function
+ * to process the request
+ */
 async function validateCreateUserPayload(
     req: Request,
     res: Response,
     next: NextFunction
 ) {
-  if (!req.body) {
+  if (!req.body) { // no paylaod
     return res.status(400).send({
       code: 'invalid-request',
       message: 'Please provide data to process',
@@ -122,28 +156,28 @@ async function validateCreateUserPayload(
 
   const {email, password, univId, name} = req.body;
 
-  if (!email) {
+  if (!email || !email.includes('@')) { // email valifation
     return res.status(400).send({
       code: 'invalid-request',
       message: 'Please enter an email',
     });
   }
 
-  if (!password || password.length < 8 || password.length > 50) {
+  if (!password || password.length < 8 || password.length > 50) { // password validation
     return res.status(400).send({
       code: 'invalid-request',
       message: 'Please enter password with 8-50 characters',
     });
   }
 
-  if (!univId) {
+  if (!univId) { // univId validation
     return res.status(400).send({
       code: 'invalid-request',
       message: 'Please provide university Id',
     });
   }
 
-  if (!name || name.length < 4 || name.length > 50) {
+  if (!name || name.length < 4 || name.length > 50) { // name validation
     return res.status(400).send({
       code: 'invalid-request',
       message: 'Please enter name with 4-50 characters',
@@ -152,12 +186,21 @@ async function validateCreateUserPayload(
   return next();
 }
 
+/**
+ * Its an express middleware function.
+ * Validates the request payload is in the expected format or not for PUT request
+ * @param {Request} req - http request recieved
+ * @param {Response} res - http response used to send data to client
+ * @param {NextFunction} next - used to pass the request handler to next express middleware function
+ * @return {Promise<void | Response<Error>>}  returns error response if it is improper. If not, passes to next middleware function
+ * to process the request
+ */
 async function validateUpdateUserPayload(
     req: Request,
     res: Response,
     next: NextFunction
 ) {
-  if (!req.body) {
+  if (!req.body) { // no payload
     return res.status(400).send({
       code: 'invalid-request',
       message: 'Please provide data to process',
@@ -166,7 +209,7 @@ async function validateUpdateUserPayload(
 
   const {name} = req.body;
 
-  if (!name || name.length < 4) {
+  if (!name || name.length < 4) { // name valdiation
     return res.status(400).send({
       code: 'invalid-request',
       message: 'Please enter name with atleast 4 characters',
@@ -175,10 +218,17 @@ async function validateUpdateUserPayload(
   return next();
 }
 
+/**
+ * GET request to retrieve user document with docId
+ * If docId does not exist, return error response.
+ * @param {Request} req - http request recieved
+ * @param {Response} res - http response used to send data to client
+ * @return {Promise<Response<User | Error>>}  - return error if no docId exist, else send user data
+ */
 async function getUserById(req: Request, res: Response) {
   const id = req.params['id'];
   const docSnap = await firestore().collection('users').doc(id).get();
-  if (!docSnap.exists) {
+  if (!docSnap.exists) { // no doc
     return res.status(400).send({
       code: 'invalid-request',
       message: 'No such record found',

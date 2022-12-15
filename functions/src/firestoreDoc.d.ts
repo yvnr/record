@@ -1,5 +1,11 @@
+/**
+ * Listing down data representation of document in each collection
+ */
+
 type Timestamp = import('@google-cloud/firestore').Timestamp;
 
+
+// Experience document data
 type Experience = {
   company: string;
   role: string;
@@ -12,12 +18,14 @@ type Experience = {
   updatedAt: Timestamp;
 };
 
+// Unviersity document data
 type University = {
   name: string;
   logo: string;
   emailDomains: string[];
 };
 
+// User document data
 type User = {
   name: string;
   email: string;
