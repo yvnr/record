@@ -1,5 +1,6 @@
 import {Router, Request, Response} from 'express';
 import {firestore} from '../admin';
+import {ErrorCode} from '../errorCodes';
 
 const router = Router(); // express router
 
@@ -16,6 +17,7 @@ export default router;
  * @return {Promise<Response<University[]>>} - returns all the unviersity docs.
  */
 async function getUnivList(req: Request, res: Response) {
+  console.info('GET: universities list');
   const docsSnap = await firestore().collection('universities').get();
   const respData = docsSnap.docs.map((doc) => {
     return Object.assign({}, {id: doc.id}, doc.data());
@@ -33,10 +35,11 @@ async function getUnivList(req: Request, res: Response) {
  */
 async function getUnivById(req: Request, res: Response) {
   const id = req.params['id'];
+  console.info(`GET: university id - ${id}`);
   const docSnap = await firestore().collection('experiences').doc(id).get();
   if (!docSnap.exists) {
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.NotFound,
       message: 'No such record found',
     });
   }

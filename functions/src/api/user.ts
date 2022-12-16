@@ -1,6 +1,7 @@
 import {NextFunction} from 'connect';
 import {Router, Request, Response} from 'express';
 import {auth, firestore} from '../admin';
+import {ErrorCode} from '../errorCodes';
 
 const router = Router(); // express router
 
@@ -24,7 +25,7 @@ export default router;
  */
 async function registerUser(req: Request, res: Response) {
   const {email, password, univId, name} = req.body as CreateUserPayload;
-  console.info(email);
+  console.info('Registering user to the univId:', univId);
   try {
     // check whether email exists or not
 
@@ -32,7 +33,7 @@ async function registerUser(req: Request, res: Response) {
 
     if (!userDoc.empty) {
       return res.status(400).send({
-        code: 'invalid-request',
+        code: ErrorCode.EmailAlreadyRegistered,
         message: 'Email is already registered',
       });
     }
@@ -44,18 +45,19 @@ async function registerUser(req: Request, res: Response) {
         .get();
     if (!univDoc.exists) {
       return res.status(400).send({
-        code: 'invalid-request',
+        code: ErrorCode.NotFound,
         message: 'Provided university is not registered in our system',
       });
     }
 
+    // validating whether registered email is registered domain with the univ or not
     const {emailDomains} = univDoc.data() as University;
     const isDomainValid = !!emailDomains.find((domain) =>
       email.endsWith(domain)
     );
     if (!isDomainValid) {
       return res.status(400).send({
-        code: 'invalid-request',
+        code: ErrorCode.InvalidRequest,
         message: 'your entered email domain is not added by the university',
       });
     }
@@ -69,6 +71,7 @@ async function registerUser(req: Request, res: Response) {
 
     const uid = userRecord.uid;
 
+    console.info('user created with id:', uid);
     // creating firestore doc.. which will be used for updating displayName and other things
     await firestore().collection('users').doc(uid).set({
       name,
@@ -84,11 +87,12 @@ async function registerUser(req: Request, res: Response) {
     // get authToken for the user.. which will be used to login after signing up
     const token = await auth().createCustomToken(uid);
 
+    // send the sessionToken which will be used to login on client side.
     return res.send({
       sessionToken: token,
     });
   } catch (err: any) {
-    console.info(err);
+    console.warn('error while creating user registeration');
     return res.status(400).send(err.message);
   }
 }
@@ -106,11 +110,13 @@ async function updateUser(req: Request, res: Response) {
   const {name} = req.body as CreateUserPayload;
   const uid = req.headers['uid'] as string;
 
+  console.info('PATCH: updating user with id:', uid);
+
   // validating the user requested and user doc update id are same or not
   if (uid != req.params['id']) {
     return res.status(400).send({
-      code: 'invalid-request',
-      message: 'You are not authorized',
+      code: ErrorCode.EmailAlreadyRegistered,
+      message: 'No such entry found',
     });
   }
   try {
@@ -147,9 +153,11 @@ async function validateCreateUserPayload(
     res: Response,
     next: NextFunction
 ) {
+  console.info('validating user payload');
+
   if (!req.body) { // no paylaod
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please provide data to process',
     });
   }
@@ -158,28 +166,28 @@ async function validateCreateUserPayload(
 
   if (!email || !email.includes('@')) { // email valifation
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please enter an email',
     });
   }
 
   if (!password || password.length < 8 || password.length > 50) { // password validation
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please enter password with 8-50 characters',
     });
   }
 
   if (!univId) { // univId validation
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please provide university Id',
     });
   }
 
   if (!name || name.length < 4 || name.length > 50) { // name validation
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please enter name with 4-50 characters',
     });
   }
@@ -200,9 +208,10 @@ async function validateUpdateUserPayload(
     res: Response,
     next: NextFunction
 ) {
+  console.info('updating user payload');
   if (!req.body) { // no payload
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please provide data to process',
     });
   }
@@ -211,7 +220,7 @@ async function validateUpdateUserPayload(
 
   if (!name || name.length < 4) { // name valdiation
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please enter name with atleast 4 characters',
     });
   }
@@ -227,10 +236,13 @@ async function validateUpdateUserPayload(
  */
 async function getUserById(req: Request, res: Response) {
   const id = req.params['id'];
+
+  console.info('GET: user for id', id);
+
   const docSnap = await firestore().collection('users').doc(id).get();
   if (!docSnap.exists) { // no doc
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.NotFound,
       message: 'No such record found',
     });
   }

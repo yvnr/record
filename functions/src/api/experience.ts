@@ -1,6 +1,7 @@
 import {Router, Request, Response, NextFunction} from 'express';
 import {firestore} from '../admin';
 import moment from 'moment-timezone';
+import {ErrorCode} from '../errorCodes';
 
 const router = Router(); // express router
 
@@ -25,7 +26,7 @@ async function createExperience(req: Request, res: Response) : Promise<Response>
   const univId = req.headers['x-univ-id'];
 
   const {summary, role, company, location} = req.body as ExperiencePayload;
-  await firestore().collection('experiences').add({
+  const doc = await firestore().collection('experiences').add({
     summary,
     role,
     company,
@@ -36,6 +37,7 @@ async function createExperience(req: Request, res: Response) : Promise<Response>
     updatedAt: moment().toDate(),
   });
 
+  console.info(`POST: experience id - ${doc.id} created`);
   return res.sendStatus(200);
 }
 
@@ -48,10 +50,11 @@ async function createExperience(req: Request, res: Response) : Promise<Response>
  */
 async function getExperienceById(req: Request, res: Response) {
   const id = req.params['id'];
+  console.info(`GET: experience id - ${id}`);
   const docSnap = await firestore().collection('experiences').doc(id).get();
   if (!docSnap.exists) { // no doc
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.NotFound,
       message: 'No such record found',
     });
   }
@@ -71,6 +74,8 @@ async function getExperienceById(req: Request, res: Response) {
  */
 async function getExperienceList(req: Request, res: Response) {
   const univId = req.headers['x-univ-id'];
+
+  console.info('GET: experiences list');
 
   // query
   const docsSnap = await firestore()
@@ -99,11 +104,13 @@ async function updateExperience(req: Request, res: Response) {
   const id = req.params['id'];
   const uid = req.headers['x-uid'];
 
+  console.info('PUT: experiences list');
+
   // checking whether doc exists or not
   const docSnap = await firestore().collection('experiences').doc(id).get();
   if (!docSnap.exists) {
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.NotFound,
       message: 'No such record found',
     });
   }
@@ -112,8 +119,8 @@ async function updateExperience(req: Request, res: Response) {
   const expData = docSnap.data() as Experience;
   if (expData.uid !== uid) {
     return res.status(400).send({
-      code: 'invalid-request',
-      message: 'Invalid permissions',
+      code: ErrorCode.Unauthorized,
+      message: 'Unauthorixed to perform this request',
     });
   }
 
@@ -145,10 +152,12 @@ async function deleteExperience(req: Request, res: Response) {
   const id = req.params['id'];
   const uid = req.headers['x-uid'];
 
+  console.info('DELETE: experience id:', id);
+
   const docSnap = await firestore().collection('experiences').doc(id).get();
   if (!docSnap.exists) {
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.NotFound,
       message: 'No such record found',
     });
   }
@@ -156,8 +165,8 @@ async function deleteExperience(req: Request, res: Response) {
   const expData = docSnap.data() as Experience;
   if (expData.uid !== uid) {
     return res.status(400).send({
-      code: 'invalid-request',
-      message: 'Invalid permissions',
+      code: ErrorCode.Unauthorized,
+      message: 'Unauthorixed to perform this request',
     });
   }
 
@@ -179,10 +188,11 @@ async function validateExpPayload(
     res: Response,
     next: NextFunction
 ) {
+  console.info('validating experience request payload');
   // no req body exists
   if (!req.body) {
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please provide data to process',
     });
   }
@@ -192,7 +202,7 @@ async function validateExpPayload(
   // check company field in req.body
   if (!company || company.length < 3 || company.length > 50) {
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please provide company with 3-50 characters',
     });
   }
@@ -200,7 +210,7 @@ async function validateExpPayload(
   // check role field
   if (!role || role.length < 3 || role.length > 50) {
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please provide role with 3-50 characters',
     });
   }
@@ -208,7 +218,7 @@ async function validateExpPayload(
   // check summary field
   if (!summary || summary.length > 1000) {
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please enter summary with max of 1000 characters',
     });
   }
@@ -216,7 +226,7 @@ async function validateExpPayload(
   // check location field
   if (!location || location.length < 3 || location.length > 50) {
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please provide location with 3-50 characters',
     });
   }
@@ -224,7 +234,7 @@ async function validateExpPayload(
   // check status field
   if (!status) {
     return res.status(400).send({
-      code: 'invalid-request',
+      code: ErrorCode.InvalidPayload,
       message: 'Please provide status',
     });
   }

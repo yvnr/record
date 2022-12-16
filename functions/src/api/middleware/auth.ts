@@ -1,5 +1,6 @@
 import {Request, Response, NextFunction} from 'express';
 import {firestore} from '../../admin';
+import {ErrorCode} from '../../errorCodes';
 
 // enum representation for all the http request methods
 enum RequestMethods {
@@ -8,6 +9,13 @@ enum RequestMethods {
   POST = 'POST',
   PATCH = 'PATCH',
 }
+
+enum Endpoints {
+  Register= '/register',
+  University = '/university'
+}
+
+const expemtionEndpoints = [(RequestMethods.GET, Endpoints.Register), (RequestMethods.POST, Endpoints.Register)];
 
 /**
  * Its an express middleware function.
@@ -33,7 +41,7 @@ export default async function(
   // no authorization headers
   if (!authorization) {
     return res.status(401).send({
-      code: 'unauthorized',
+      code: ErrorCode.Unauthorized,
       message: 'You are not authorized to make this request',
     });
   }
@@ -46,14 +54,18 @@ export default async function(
   const [apiKey, apiSecret] = authorization.split(' ');
   if (!apiKey || !apiSecret || apiSecret != secrets[apiKey]) {
     return res.status(401).send({
-      code: 'unauthorized',
+      code: ErrorCode.Unauthorized,
       message: 'You are not authorized to make this request',
     });
   }
 
-  // POST request for register end point and all university related GET endpoints does not need any further headers
-  if ((req.url.endsWith('register') && req.method == RequestMethods.POST) ||
-  (req.url.includes('/university')&& req.method == RequestMethods.GET)) {
+  const originalUrl = req.originalUrl;
+
+  // no need of headers related to user and university for the expemtionEndpoints
+  const isEndpointExpemted = expemtionEndpoints.reduce(((acc: boolean, curr) =>
+    acc || (originalUrl.endsWith(curr[1]) && req.method == curr[0])), false);
+
+  if (isEndpointExpemted) {
     return next();
   }
 
@@ -65,5 +77,6 @@ export default async function(
     });
   }
 
+  console.info(`univId: ${univId} and uid: ${uid}`);
   return next();
 }
