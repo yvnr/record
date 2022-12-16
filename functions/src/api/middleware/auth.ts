@@ -15,7 +15,7 @@ enum Endpoints {
   University = '/university'
 }
 
-const expemtionEndpoints = [(RequestMethods.GET, Endpoints.Register), (RequestMethods.POST, Endpoints.Register)];
+const expemtionEndpoints = [[RequestMethods.GET, Endpoints.University], [RequestMethods.POST, Endpoints.Register]];
 
 /**
  * Its an express middleware function.
@@ -32,7 +32,7 @@ export default async function(
     req: Request,
     res: Response,
     next: NextFunction
-) : Promise<void | Response> {
+) : Promise<void | Response | NextFunction> {
   console.info('validating the authorization');
   const authorization = req.headers['authorization'];
   const uid = req.headers['x-uid'];
@@ -59,7 +59,7 @@ export default async function(
     });
   }
 
-  const originalUrl = req.originalUrl;
+  const originalUrl = req.originalUrl.split('?')[0];
 
   // no need of headers related to user and university for the expemtionEndpoints
   const isEndpointExpemted = expemtionEndpoints.reduce(((acc: boolean, curr) =>
@@ -72,7 +72,7 @@ export default async function(
   // check whether univId and uid is present or not
   if (!uid || !univId) {
     return res.status(401).send({
-      code: 'unauthorized',
+      code: ErrorCode.Unauthorized,
       message: 'Please provide proper headers',
     });
   }

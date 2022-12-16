@@ -23,14 +23,13 @@ export default router;
  * @return {Promise<Response<{sessionToken: string} | Error>>} - returns error response if email already exists. Otherwise returns sessionToken
  * as json object.
  */
-async function registerUser(req: Request, res: Response) {
+export async function registerUser(req: Request, res: Response) {
   const {email, password, univId, name} = req.body as CreateUserPayload;
   console.info('Registering user to the univId:', univId);
   try {
     // check whether email exists or not
 
     const userDoc = await firestore().collection('users').where('email', '==', email).get();
-
     if (!userDoc.empty) {
       return res.status(400).send({
         code: ErrorCode.EmailAlreadyRegistered,
@@ -106,16 +105,16 @@ async function registerUser(req: Request, res: Response) {
  * @return {Promise<Response<200 | Error>>} - returns error response if the doc does not exist and also if the doc is not
  * created by the requested user. Otherwise send status 200
  */
-async function updateUser(req: Request, res: Response) {
+export async function updateUser(req: Request, res: Response) {
   const {name} = req.body as CreateUserPayload;
-  const uid = req.headers['uid'] as string;
+  const uid = req.headers['x-uid'] as string;
 
   console.info('PATCH: updating user with id:', uid);
 
   // validating the user requested and user doc update id are same or not
   if (uid != req.params['id']) {
     return res.status(400).send({
-      code: ErrorCode.EmailAlreadyRegistered,
+      code: ErrorCode.InvalidRequest,
       message: 'No such entry found',
     });
   }
@@ -148,7 +147,7 @@ async function updateUser(req: Request, res: Response) {
  * @return {Promise<void | Response<Error>>}  return error response if it is improper. If not, passes to next middleware function
  * to process the request
  */
-async function validateCreateUserPayload(
+export async function validateCreateUserPayload(
     req: Request,
     res: Response,
     next: NextFunction
@@ -203,7 +202,7 @@ async function validateCreateUserPayload(
  * @return {Promise<void | Response<Error>>}  returns error response if it is improper. If not, passes to next middleware function
  * to process the request
  */
-async function validateUpdateUserPayload(
+export async function validateUpdateUserPayload(
     req: Request,
     res: Response,
     next: NextFunction
@@ -218,7 +217,7 @@ async function validateUpdateUserPayload(
 
   const {name} = req.body;
 
-  if (!name || name.length < 4) { // name valdiation
+  if (!name || name.length < 4 || name.length > 50) { // name valdiation
     return res.status(400).send({
       code: ErrorCode.InvalidPayload,
       message: 'Please enter name with atleast 4 characters',
@@ -234,7 +233,7 @@ async function validateUpdateUserPayload(
  * @param {Response} res - http response used to send data to client
  * @return {Promise<Response<User | Error>>}  - return error if no docId exist, else send user data
  */
-async function getUserById(req: Request, res: Response) {
+export async function getUserById(req: Request, res: Response) {
   const id = req.params['id'];
 
   console.info('GET: user for id', id);

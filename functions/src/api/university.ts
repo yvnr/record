@@ -16,7 +16,7 @@ export default router;
  * @param {Response} res - http response used to send data to client
  * @return {Promise<Response<University[]>>} - returns all the unviersity docs.
  */
-async function getUnivList(req: Request, res: Response) {
+export async function getUnivList(req: Request, res: Response) {
   console.info('GET: universities list');
   const docsSnap = await firestore().collection('universities').get();
   const respData = docsSnap.docs.map((doc) => {
@@ -33,7 +33,7 @@ async function getUnivList(req: Request, res: Response) {
  * @return {Promise<Response<University | Error>>}  - If the docId does not exist in the collection, will throw an error
  * else, sends the data
  */
-async function getUnivById(req: Request, res: Response) {
+export async function getUnivById(req: Request, res: Response) {
   const id = req.params['id'];
   console.info(`GET: university id - ${id}`);
   const docSnap = await firestore().collection('experiences').doc(id).get();

@@ -21,17 +21,18 @@ export default router;
  * @param {Response} res - http response used to send data to client
  * @return {Promise<Response<200>>} returns the response with status 200
  */
-async function createExperience(req: Request, res: Response) : Promise<Response> {
+export async function createExperience(req: Request, res: Response) : Promise<Response> {
   const uid = req.headers['x-uid'];
   const univId = req.headers['x-univ-id'];
 
-  const {summary, role, company, location} = req.body as ExperiencePayload;
+  const {summary, role, company, location, status} = req.body as ExperiencePayload;
   const doc = await firestore().collection('experiences').add({
     summary,
     role,
     company,
     location,
     uid,
+    status,
     univId,
     createdAt: moment().toDate(),
     updatedAt: moment().toDate(),
@@ -48,7 +49,7 @@ async function createExperience(req: Request, res: Response) : Promise<Response>
  * @return {Promise<Response<Experience | Error>>}  - If the docId does not exist in the collection, will throw an error
  * else, sends the data
  */
-async function getExperienceById(req: Request, res: Response) {
+export async function getExperienceById(req: Request, res: Response) {
   const id = req.params['id'];
   console.info(`GET: experience id - ${id}`);
   const docSnap = await firestore().collection('experiences').doc(id).get();
@@ -72,7 +73,7 @@ async function getExperienceById(req: Request, res: Response) {
  * @param {Response} res - http response used to send data to client
  * @return {Promise<Response<Experience[]>>} - returns all the experience docs.
  */
-async function getExperienceList(req: Request, res: Response) {
+export async function getExperienceList(req: Request, res: Response) {
   const univId = req.headers['x-univ-id'];
 
   console.info('GET: experiences list');
@@ -100,7 +101,7 @@ async function getExperienceList(req: Request, res: Response) {
  * @return {Promise<Response<200 | Error>>} - returns error if the doc does not exist and also if the experience is not
  * created by the requested user. Otherwise updates the doc and sends status 200
  */
-async function updateExperience(req: Request, res: Response) {
+export async function updateExperience(req: Request, res: Response) {
   const id = req.params['id'];
   const uid = req.headers['x-uid'];
 
@@ -124,7 +125,7 @@ async function updateExperience(req: Request, res: Response) {
     });
   }
 
-  const {summary, role, company, location} = req.body as ExperiencePayload;
+  const {summary, role, company, location, status} = req.body as ExperiencePayload;
 
   // updating the doc
   await docSnap.ref.set(
@@ -132,6 +133,7 @@ async function updateExperience(req: Request, res: Response) {
         summary,
         role,
         company,
+        status,
         location,
         updatedAt: moment().toDate(),
       },
@@ -148,7 +150,7 @@ async function updateExperience(req: Request, res: Response) {
  * @return {Promise<Response<200 | Error>>} - returns error if the doc does not exist and also if the experience is not
  * created by the requested user. Otherwise delete the doc and sends status 200
  */
-async function deleteExperience(req: Request, res: Response) {
+export async function deleteExperience(req: Request, res: Response) {
   const id = req.params['id'];
   const uid = req.headers['x-uid'];
 
@@ -183,7 +185,7 @@ async function deleteExperience(req: Request, res: Response) {
  * @return {Promise<void | Response<Error>>}  returns Response with an error if it is improper. If not, passes to next middleware function
  * to process the request
  */
-async function validateExpPayload(
+export async function validateExpPayload(
     req: Request,
     res: Response,
     next: NextFunction
@@ -216,10 +218,10 @@ async function validateExpPayload(
   }
 
   // check summary field
-  if (!summary || summary.length > 1000) {
+  if (!summary || summary.length > 10000) {
     return res.status(400).send({
       code: ErrorCode.InvalidPayload,
-      message: 'Please enter summary with max of 1000 characters',
+      message: 'Please enter summary with max of 10000 characters',
     });
   }
 
