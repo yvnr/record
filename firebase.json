@@ -28,6 +28,9 @@
     }
   ],
   "emulators": {
+    "auth": {
+      "port": 8015
+    },
     "functions": {
       "port": 8060
     },
