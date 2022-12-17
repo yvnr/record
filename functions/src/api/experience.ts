@@ -68,22 +68,34 @@ export async function getExperienceById(req: Request, res: Response) {
 }
 
 /**
- * GET request to retrieves all experience documents linked with the university Id
+ * GET request to retrieves all experience documents based on the req query
+ * if query contains company, get experiences doc based on the company and univId, else return all based on the univId
  * @param {Request} req - http request recieved
  * @param {Response} res - http response used to send data to client
  * @return {Promise<Response<Experience[]>>} - returns all the experience docs.
  */
 export async function getExperienceList(req: Request, res: Response) {
   const univId = req.headers['x-univ-id'];
-
+  const company = req.query['company'];
   console.info('GET: experiences list');
 
   // query
+  if (company) {
+    const docsSnap = await firestore()
+        .collection('experiences')
+        .where('univId', '==', univId).where('company', '==', company).get();
+    // converting timestamp to date
+    const respData = docsSnap.docs.map((doc) => {
+      const expData = doc.data() as Experience;
+      const {createdAt, updatedAt} = expData;
+      return Object.assign({}, {id: doc.id}, expData, {createdAt: createdAt.toDate(), updatedAt: updatedAt.toDate()} );
+    });
+    return res.send(respData);
+  }
+
   const docsSnap = await firestore()
       .collection('experiences')
-      .where('univId', '==', univId)
-      .get();
-
+      .where('univId', '==', univId).get();
   // converting timestamp to date
   const respData = docsSnap.docs.map((doc) => {
     const expData = doc.data() as Experience;

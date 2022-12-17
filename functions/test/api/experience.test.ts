@@ -62,7 +62,10 @@ jest.mock('firebase-admin', () => {
         })),
         doc: docQuery,
         where: jest.fn((prop, cond, val) => ({
-          get: val=='univId' ?succGroupQuery : emptyGroupQuery,
+          get: val=='univId' ? succGroupQuery : emptyGroupQuery,
+          where: jest.fn(()=>({
+            get: val=='univId' ? succGroupQuery : emptyGroupQuery,
+          }))
         })),
         get: succGroupQuery,
       })),
@@ -547,8 +550,8 @@ describe('Retrieve experience by id', ()=>{
 describe('Retrieve all experiences', ()=>{
   it('retrieve all experiences', ()=>{
     const req = {
-      params: {
-        'id': 'id1',
+      query: {
+        'company': 'company',
       },
       body: {
         'email': 'umass@umass.edu',
